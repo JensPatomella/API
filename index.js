@@ -28,6 +28,37 @@ function hash(data) {
 const jwt = require("jsonwebtoken");
 const secret = "EnHemlighetSomIngenKanGissaXyz123%&/";
 
+app.post("/users", function (req, res) {
+  if (!req.body.userId) {
+    res.status(400).send("userId required!");
+    return;
+  }
+  let fields = ["firstname", "lastname", "userId", "passwd"]; // ändra eventuellt till namn på er egen databastabells kolumner
+  for (let key in req.body) {
+    if (!fields.includes(key)) {
+      res.status(400).send("Unknown field: " + key);
+      return;
+    }
+  }
+  // OBS: näst sista raden i SQL-satsen står det hash(req.body.passwd) istället för req.body.passwd
+  // Det hashade lösenordet kan ha över 50 tecken, så använd t.ex. typen VARCHAR(100) i databasen, annars riskerar det hashade lösenordet att trunkeras (klippas av i slutet)
+  let sql = `INSERT INTO users (firstname, lastname, userId, passwd)
+    VALUES (?, ?, ?, '${hash(req.body.passwd)}')`; // OBS: lösenordet hashas!
+  console.log(sql);
+
+  con.query(sql, [req.body.firstname, req.body.lastname, req.body.userId], function (err, result, fields) {
+    if (err) throw err;
+    console.log(result);
+    let output = {
+      id: result.insertId,
+      firstname: req.body.firstname,
+      lastname: req.body.lastname,
+      userId: req.body.userId,
+    }; // OBS: bäst att INTE returnera lösenordet
+    res.send(output);
+  });
+});
+
 app.post("/login", function (req, res) {
   console.log(req.body);
   let sql = `SELECT * FROM users WHERE userId=?`;

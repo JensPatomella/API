@@ -1,4 +1,4 @@
-let express = require("express"); // FRAM TILL RAD 55 ÄR KODEN IDENTISK MED FÖRRA VECKANS KOD
+let express = require("express");
 let app = express();
 app.listen(3000);
 console.log("Servern körs på port 3000");
@@ -28,22 +28,46 @@ function hash(data) {
 const jwt = require("jsonwebtoken");
 const secret = "EnHemlighetSomIngenKanGissaXyz123%&/";
 
+function isloggedin(req) {
+  let authHeader = req.headers["authorization"];
+  if (authHeader === undefined) {
+    return false;
+  }
+  let token = authHeader.slice(7);
+  try {
+    decoded = jwt.verify(token, secret);
+  } catch (err) {
+    return false;
+  }
+  sql = `SELECT * FROM users WHERE userId='${decoded.userId}'`;
+  con.query(sql, function (err, result, fields) {
+    if (err) {
+      return false;
+    }
+    if (result.length > 0) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  );
+}
+
 app.post("/users", function (req, res) {
   if (!req.body.userId) {
     res.status(400).send("userId required!");
     return;
   }
-  let fields = ["firstname", "lastname", "userId", "passwd"]; // ändra eventuellt till namn på er egen databastabells kolumner
+  let fields = ["firstname", "lastname", "userId", "passwd"];
   for (let key in req.body) {
     if (!fields.includes(key)) {
       res.status(400).send("Unknown field: " + key);
       return;
     }
   }
-  // OBS: näst sista raden i SQL-satsen står det hash(req.body.passwd) istället för req.body.passwd
-  // Det hashade lösenordet kan ha över 50 tecken, så använd t.ex. typen VARCHAR(100) i databasen, annars riskerar det hashade lösenordet att trunkeras (klippas av i slutet)
+  
   let sql = `INSERT INTO users (firstname, lastname, userId, passwd)
-    VALUES (?, ?, ?, '${hash(req.body.passwd)}')`; // OBS: lösenordet hashas!
+    VALUES (?, ?, ?, '${hash(req.body.passwd)}')`;
   console.log(sql);
 
   con.query(sql, [req.body.firstname, req.body.lastname, req.body.userId], function (err, result, fields) {
@@ -54,7 +78,7 @@ app.post("/users", function (req, res) {
       firstname: req.body.firstname,
       lastname: req.body.lastname,
       userId: req.body.userId,
-    }; // OBS: bäst att INTE returnera lösenordet
+    };
     res.send(output);
   });
 });
@@ -80,37 +104,59 @@ app.post("/login", function (req, res) {
   });
 });
 
-// HÄR BÖRJAR DET SOM ÄR NYTT FÖR DENNA VECKA
-// Vi lägger in en get-route som är kräver token för att returnera data
+app.put("/users/:id", function (req, res) {
+  if (!(req.body && req.body.firstname && req.body.lastname && req.body.userId && req.body.passwd)) {
+    res.sendStatus(400);
+    return;
+  }
+  let sql = `UPDATE users 
+        SET firstname = ?, lastname = ?, userId = ?, passwd = ?
+        WHERE id = ?`;
+  con.query(
+    sql,
+    [req.body.firstname, req.body.lastname, req.body.userId, req.body.passwd, req.params.id],
+    function (err, result) {
+      if (err) {
+        throw err;
+      } else {
+        res.sendStatus(200);
+      }
+    }
+  );
+});
+
 app.get("/users", function (req, res) {
-  let authHeader = req.headers["authorization"];
-  if (authHeader === undefined) {
-    // skicka lämplig HTTP-status om auth-header saknas, en “400 någonting”
-    res.sendStatus(400); // "Bad request"
-    return;
-  }
-  let token = authHeader.slice(7); // tar bort "BEARER " från headern.
-  // nu finns den inskickade token i variabeln token
-  console.log(token);
-
-  // avkoda token
-  let decoded;
-  try {
-    decoded = jwt.verify(token, secret);
-  } catch (err) {
-    console.log(err); //Logga felet, för felsökning på servern.
-    res.status(401).send("Invalid auth token");
-    return;
-  }
-
-  //Här kan man göra något bra med den info som finns i decoded...
-  console.log(decoded);
-  console.log("Tjena " + decoded.name + " " + decoded.lastname);
-  // ... men just nu nöjer vi oss bara att läsa från databasen.
-  let sql = `SELECT * FROM users WHERE userId='${decoded.sub}'`; // ÄNDRA TILL NAMN PÅ ER EGEN TABELL (om den heter något annat än "users")
-  console.log(sql);
-  // skicka query till databasen
-  con.query(sql, function (err, result, fields) {
+  let sql = "SELECT * FROM users";
+  let condition = createCondition(req.query);
+  console.log(sql + condition);
+  con.query(sql + condition, function (err, result, fields) {
     res.send(result);
+  });
+});
+
+let createCondition = function (query) {
+  console.log(query);
+  let output = " WHERE ";
+  for (let key in query) {
+    if (COLUMNS.includes(key)) {
+      output += `${key}="${query[key]}" OR `;
+    }
+  }
+  if (output.length == 7) {
+    return "";
+  } else {
+    return output.substring(0, output.length - 4);
+  }
+};
+
+app.get("/users/:id", function (req, res) {
+  let sql = "SELECT * FROM users WHERE id=" + req.params.id;
+  console.log(sql);
+  con.query(sql, function (err, result, fields) {
+    if (result.length > 0) {
+      res.send(result);
+    } else {
+      res.sendStatus(404);
+    }
   });
 });

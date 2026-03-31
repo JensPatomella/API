@@ -1,19 +1,41 @@
 <html>
   <body>
-    <h1>Dokumentation av det här APIet</h1>
+    <h1>API Dokumentation</h1>
+
     <h2>Routes</h2>
 
-    <ul>
-      <li>
-        <em>POST /login</em> - inloggning, accepterar JSON-objekt på formatet
-        ...
-      </li>
-      Returnerar en bearer token.
-      <li>
-        <em>GET /users</em> - returnerar användare, kräver en bearer token i
-        header för tillgång.
-      </li>
-      <li>POST /users</em> - skapar en ny användare med hashat lösenord, accepterar JSON objekt på formatet {"firstname": "", "lastname": "", "userId": "unikt namn", "passwd": ""}. <code>userId</code> är obligatoriskt.</li>
-    </ul>
+    <h3>GET /</h3>
+    <p><strong>Auth:</strong> Nej</p>
+    <p>Returnerar denna dokumentation.</p>
+
+    <h3>POST /users</h3>
+    <p><strong>Auth:</strong> Nej</p>
+    <p>Skapar ny användare (passwd hashed SHA256).</p>
+    <p><strong>Body (JSON):</strong></p>
+    <p>{"firstname": "Anna", "lastname": "Andersson", "userId": "anna", "passwd": "password"}</p>
+    
+  
+    <h3>POST /login</h3>
+    <p><strong>Auth:</strong> Nej</p>
+    <p>Loggar in och returnerar JWT bearer token.</p>
+    <p><strong>Body (JSON):</strong></p>
+    <p>{"userId": "anna", "passwd": "password"}</p>
+  
+
+    <h3>GET /users</h3>
+    <p><strong>Auth:</strong> Ja (Bearer token)</p>
+    <p>Lista alla eller filtrera användare (?firstname=Anna OR lastname=Berg etc.).</p>
+    <p><strong>Query params:</strong> firstname, lastname, userId, id</p>
+    
+
+    <h3>GET /users/:id</h3>
+    <p><strong>Auth:</strong> Ja</p>
+    <p>Hämtar specifik user.</p>
+   
+    <h3>PUT /users/:id</h3>
+    <p><strong>Auth:</strong> Ja (Bearer token)</p>
+    <p>Uppdaterar user (notera: passwd inte hashed i update).</p>
+    <p><strong>Body (JSON):</strong> Samma som POST /users</p>
+    <p>{"firstname":"Nya","lastname":"Namn","userId":"nya","passwd":"newpass"}'</p>
   </body>
 </html>

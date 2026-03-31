@@ -35,22 +35,11 @@ function isloggedin(req) {
   }
   let token = authHeader.slice(7);
   try {
-    decoded = jwt.verify(token, secret);
+    jwt.verify(token, secret);
   } catch (err) {
     return false;
   }
-  sql = `SELECT * FROM users WHERE userId='${decoded.userId}'`;
-  con.query(sql, function (err, result, fields) {
-    if (err) {
-      return false;
-    }
-    if (result.length > 0) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-  );
+  return true
 }
 
 app.post("/users", function (req, res) {
@@ -105,6 +94,10 @@ app.post("/login", function (req, res) {
 });
 
 app.put("/users/:id", function (req, res) {
+  if (!isloggedin(req)) {
+    res.sendStatus(401);
+    return;
+  }
   if (!(req.body && req.body.firstname && req.body.lastname && req.body.userId && req.body.passwd)) {
     res.sendStatus(400);
     return;
@@ -126,6 +119,10 @@ app.put("/users/:id", function (req, res) {
 });
 
 app.get("/users", function (req, res) {
+  if (!isloggedin(req)) {
+    res.sendStatus(401);
+    return;
+  }
   let sql = "SELECT * FROM users";
   let condition = createCondition(req.query);
   console.log(sql + condition);
@@ -150,6 +147,10 @@ let createCondition = function (query) {
 };
 
 app.get("/users/:id", function (req, res) {
+  if (!isloggedin(req)) {
+    res.sendStatus(401);
+    return;
+  }
   let sql = "SELECT * FROM users WHERE id=" + req.params.id;
   console.log(sql);
   con.query(sql, function (err, result, fields) {

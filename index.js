@@ -85,7 +85,7 @@ app.post("/login", function (req, res) {
         name: result[0].firstname,
         lastname: result[0].lastname,
       };
-      let token = jwt.sign(payload, secret);
+      let token = jwt.sign(payload, secret, { expiresIn: '15m' });
       res.json(token);
     } else {
       res.sendStatus(401);
